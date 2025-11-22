@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>后端 C - 喵星人社区测试</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        .btn { background: #007BFF; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px;}
+        .btn:hover { background: #0056b3; }
+        input, textarea { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+        img { max-width: 100%; margin-top: 10px; border-radius: 4px; }
+        .preview { max-width: 100px; display: none; }
+    </style>
+</head>
+<body>
+    <h1>🐱 喵星人社区 - 后端测试台</h1>
+    
+    <div class="card" style="background: #f9f9f9;">
+        <h3>发布新动态</h3>
+        <textarea id="content" placeholder="今天发生了什么猫猫趣事？"></textarea>
+        
+        <input type="file" id="fileInput">
+        <img id="previewImg" class="preview" src="">
+        <input type="hidden" id="imageUrl"> <button class="btn" onclick="uploadAndPost()">发布帖子</button>
+    </div>
+
+    <hr>
+
+    <h3>最新动态 (从数据库读取)</h3>
+    <button class="btn" style="background: #28a745;" onclick="loadPosts()">🔄 刷新列表</button>
+    <div id="postList"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3003'; // 你的后端地址
+
+        // 1. 上传图片并发布
+        async function uploadAndPost() {
+            const content = document.getElementById('content').value;
+            const fileInput = document.getElementById('fileInput');
+            let finalImageUrl = null;
+
+            if(!content) return alert('写点内容吧！');
+
+            // 如果选了图片，先上传图片
+            if (fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                try {
+                    const uploadRes = await fetch(`${API_URL}/api/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.code === 200) {
+                        finalImageUrl = uploadData.url;
+                    } else {
+                        return alert('图片上传失败');
+                    }
+                } catch (e) {
+                    return alert('上传接口报错');
+                }
+            }
+
+            // 发布帖子
+            const postData = {
+                content: content,
+                userId: 1,
+                type: 'daily',
+                images: finalImageUrl ? [finalImageUrl] : [] // 如果有图就放进去
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/api/posts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(postData)
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('发布成功！');
+                    document.getElementById('content').value = '';
+                    fileInput.value = '';
+                    loadPosts(); // 重新加载列表
+                }
+            } catch (e) {
+                alert('发布失败');
+            }
+        }
+
+        // 2. 加载帖子列表
+        async function loadPosts() {
+            const res = await fetch(`${API_URL}/api/posts`);
+            const result = await res.json();
+            
+            const listDiv = document.getElementById('postList');
+            listDiv.innerHTML = ''; // 清空
+
+            result.data.forEach(post => {
+                // 解析图片
+                let imgHtml = '';
+                try {
+                    const images = JSON.parse(post.images || '[]');
+                    if (images.length > 0) {
+                        imgHtml = `<img src="${images[0]}" alt="配图">`;
+                    }
+                } catch (e) {}
+
+                const html = `
+                    <div class="card">
+                        <div style="color: #666; font-size: 12px;">ID: ${post.id} | 时间: ${new Date(post.created_at).toLocaleString()}</div>
+                        <div style="font-size: 16px; margin: 10px 0;">${post.content}</div>
+                        ${imgHtml}
+                        <div style="margin-top: 10px;">
+                            <small>👍 点赞: ${post.likes || 0}</small>
+                        </div>
+                    </div>
+                `;
+                listDiv.innerHTML += html;
+            });
+        }
+
+        // 打开页面自动加载一次
+        loadPosts();
+    </script>
+</body>
+</html>
