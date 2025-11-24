@@ -32,7 +32,7 @@
     <div id="postList"></div>
 
     <script>
-        const API_URL = 'http://localhost:3003'; // 你的后端地址
+        const API_URL = 'http://localhost:3000'; // 你的后端地址，确保是 3000
 
         // 1. 上传图片并发布
         async function uploadAndPost() {
@@ -48,18 +48,21 @@
                 formData.append('file', fileInput.files[0]);
 
                 try {
+                    // ✅ 修复一：使用正确的接口地址 /api/community/posts
                     const uploadRes = await fetch(`${API_URL}/api/upload`, {
                         method: 'POST',
+                        // FormData 会自动设置 Content-Type 为 multipart/form-data，这里不需要手动设置
                         body: formData
                     });
                     const uploadData = await uploadRes.json();
                     if (uploadData.code === 200) {
                         finalImageUrl = uploadData.url;
                     } else {
-                        return alert('图片上传失败');
+                        return alert('图片上传失败: ' + (uploadData.msg || '未知错误'));
                     }
                 } catch (e) {
-                    return alert('上传接口报错');
+                    console.error('上传接口报错:', e);
+                    return alert('上传接口报错，请检查控制台');
                 }
             }
 
@@ -72,9 +75,15 @@
             };
 
             try {
-                const res = await fetch(`${API_URL}/api/posts`, {
+                // ✅ 修复二：
+                // 1. 使用正确的接口地址 /api/community/posts
+                // 2. 添加 Content-Type: application/json 请求头
+                // 3. 使用 JSON.stringify() 序列化请求体
+                const res = await fetch(`${API_URL}/api/community/posts`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(postData)
                 });
                 const data = await res.json();
@@ -83,42 +92,66 @@
                     document.getElementById('content').value = '';
                     fileInput.value = '';
                     loadPosts(); // 重新加载列表
+                } else {
+                    alert('发布失败: ' + (data.msg || '未知错误'));
                 }
             } catch (e) {
-                alert('发布失败');
+                console.error('发布失败:', e);
+                alert('发布失败，请检查控制台');
             }
         }
 
         // 2. 加载帖子列表
         async function loadPosts() {
-            const res = await fetch(`${API_URL}/api/posts`);
-            const result = await res.json();
-            
-            const listDiv = document.getElementById('postList');
-            listDiv.innerHTML = ''; // 清空
+            try {
+                // ✅ 修复三：使用正确的接口地址 /api/community/posts
+                const res = await fetch(`${API_URL}/api/community/posts`);
+                const result = await res.json();
+                
+                const listDiv = document.getElementById('postList');
+                listDiv.innerHTML = ''; // 清空
 
-            result.data.forEach(post => {
-                // 解析图片
-                let imgHtml = '';
-                try {
-                    const images = JSON.parse(post.images || '[]');
-                    if (images.length > 0) {
-                        imgHtml = `<img src="${images[0]}" alt="配图">`;
-                    }
-                } catch (e) {}
+                if (result.code === 200 && result.data) {
+                    result.data.forEach(post => {
+                        // 解析图片
+                        let imgHtml = '';
+                        try {
+                            const images = JSON.parse(post.images || '[]');
+                            if (images.length > 0) {
+                                // 获取第一张图片的 URL
+                                let imageUrl = images[0];
+                                // 如果 URL 中包含旧端口 3003，把它替换成新端口 3000 (兼容旧数据)
+                                if (imageUrl && imageUrl.includes('localhost:3003')) {
+                                    imageUrl = imageUrl.replace('localhost:3003', 'localhost:3000');
+                                }
+                                // 使用替换后的 URL
+                                if (imageUrl) {
+                                    imgHtml = `<img src="${imageUrl}" alt="配图">`;
+                                }
+                            }
+                        } catch (e) {
+                            console.error('解析图片失败:', e);
+                        }
 
-                const html = `
-                    <div class="card">
-                        <div style="color: #666; font-size: 12px;">ID: ${post.id} | 时间: ${new Date(post.created_at).toLocaleString()}</div>
-                        <div style="font-size: 16px; margin: 10px 0;">${post.content}</div>
-                        ${imgHtml}
-                        <div style="margin-top: 10px;">
-                            <small>👍 点赞: ${post.likes || 0}</small>
-                        </div>
-                    </div>
-                `;
-                listDiv.innerHTML += html;
-            });
+                        const html = `
+                            <div class="card">
+                                <div style="color: #666; font-size: 12px;">ID: ${post.id} | 时间: ${new Date(post.created_at).toLocaleString()}</div>
+                                <div style="font-size: 16px; margin: 10px 0;">${post.content}</div>
+                                ${imgHtml}
+                                <div style="margin-top: 10px;">
+                                    <small>👍 点赞: ${post.likes || 0}</small>
+                                </div>
+                            </div>
+                        `;
+                        listDiv.innerHTML += html;
+                    });
+                } else {
+                    listDiv.innerHTML = '<p>加载失败或没有数据</p>';
+                }
+            } catch (e) {
+                console.error('加载列表失败:', e);
+                document.getElementById('postList').innerHTML = '<p>加载列表发生错误，请检查控制台</p>';
+            }
         }
 
         // 打开页面自动加载一次
