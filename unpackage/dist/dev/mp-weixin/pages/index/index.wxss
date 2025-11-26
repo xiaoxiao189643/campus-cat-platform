@@ -1,0 +1,17 @@
+
+.container.data-v-1cf27b2a {
+  min-height: 100vh;
+  background: #FFFFFF;
+  padding: 40rpx;
+}
+.welcome-section.data-v-1cf27b2a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+.welcome-text.data-v-1cf27b2a {
+  font-size: 36rpx;
+  color: #333333;
+  font-weight: 500;
+}
