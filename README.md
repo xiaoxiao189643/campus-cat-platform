@@ -1,6 +1,6 @@
 # 校园流浪猫互助平台
 
-基于 **UniApp**（微信小程序）和 **Node.js + Express + MySQL** 开发的校园流浪猫救助与社区互动平台。
+基于 **UniApp**（微信小程序）和 **Node.js + Express + MongoDB** 开发的校园流浪猫救助与社区互动平台。
 
 ---
 
@@ -11,7 +11,7 @@
 | 前端框架 | UniApp (Vue 2/3 双版本兼容) |
 | 目标平台 | 微信小程序 (`mp-weixin`) |
 | 后端框架 | Express 5.x |
-| 数据库 | MySQL（mysql2，promise 连接池） |
+| 数据库 | MongoDB (`campus_cat_db`) |
 | 文件上传 | multer |
 | 认证方式 | JWT (Bearer Token) |
 | 开发工具 | HBuilderX / VS Code + 微信开发者工具 |
@@ -23,7 +23,7 @@
 ### 1. 环境准备
 
 - Node.js 18+
-- MySQL 8.0+（端口 3307）
+- MongoDB
 - HBuilderX 或 uni-app CLI
 - 微信开发者工具
 
@@ -36,13 +36,10 @@ cd server
 cp .env.example .env          # 根据需要修改环境变量
 npm install
 
-# 创建数据库（MySQL 中执行）
-# CREATE DATABASE campus_cat_db;
-
 npm run dev                    # nodemon 热重载，默认端口 3000
 ```
 
-> 数据库连接配置见 `server/db.js`，默认连接 `localhost:3307` 上的 `campus_cat_db`。
+> 数据库连接配置见 `server/db.js`，默认连接本地 MongoDB 的 `campus_cat_db` 数据库。
 
 ### 3. 前端运行
 
@@ -92,7 +89,7 @@ campus-cat-platform/
 ├── server/                  # 后端
 │   ├── app.js               # Express 应用配置入口
 │   ├── server.js            # 服务器启动
-│   ├── db.js                # MySQL 连接池
+│   ├── db.js                # MongoDB 连接
 │   ├── routes/              # 路由（已实现）
 │   │   ├── community.js     # 社区帖子/评论
 │   │   ├── donation.js      # 物资捐献
@@ -197,4 +194,4 @@ campus-cat-platform/
 1. **分支策略**：各自在功能分支开发，通过 Pull Request 合并到 `dev` 分支
 2. **前后端字段对齐**：响应使用统一的 `code` 或 `success` 字段，避免混用
 3. **端口规范**：所有 API 统一端口，避免上传接口单独使用 3003 的情况
-4. **数据库操作**：统一通过 `server/db.js` 连接池操作，避免直连
+4. **数据库操作**：统一通过 `server/db.js` 连接 MongoDB，避免直连
